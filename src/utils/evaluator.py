@@ -7,6 +7,7 @@ import time
 import tiktoken
 from dataclasses import dataclass
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 @dataclass
@@ -93,14 +94,55 @@ class PromptEvaluator:
         task: str,
         techniques: Dict[str, str],  # technique_name -> prompt
         scorer: Optional[Callable[[str], float]] = None,
+        parallel: bool = True,
+        max_workers: Optional[int] = None,
         **kwargs
     ) -> ComparisonResult:
-        """Compare multiple prompt techniques on the same task"""
-        results = []
+        """
+        Compare multiple prompt techniques on the same task.
         
-        for technique_name, prompt in techniques.items():
-            result = self.evaluate(technique_name, prompt, scorer, **kwargs)
-            results.append(result)
+        Args:
+            task: The task description
+            techniques: Dictionary mapping technique names to prompts
+            scorer: Optional scoring function
+            parallel: If True, execute techniques in parallel (default: True)
+            max_workers: Maximum number of parallel workers (default: None = auto)
+            **kwargs: Additional arguments for evaluate method
+        
+        Returns:
+            ComparisonResult with all evaluation results
+        """
+        if parallel and len(techniques) > 1:
+            # Execute techniques in parallel
+            results = []
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # Submit all evaluation tasks
+                future_to_technique = {
+                    executor.submit(self.evaluate, technique_name, prompt, scorer, **kwargs): technique_name
+                    for technique_name, prompt in techniques.items()
+                }
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_technique):
+                    technique_name = future_to_technique[future]
+                    try:
+                        result = future.result()
+                        results.append(result)
+                    except Exception as e:
+                        # Handle errors gracefully
+                        results.append(EvaluationResult(
+                            technique=technique_name,
+                            prompt=techniques[technique_name],
+                            response=f"Error: {str(e)}",
+                            execution_time=0.0,
+                            metadata={"error": str(e)}
+                        ))
+        else:
+            # Execute techniques sequentially (original behavior)
+            results = []
+            for technique_name, prompt in techniques.items():
+                result = self.evaluate(technique_name, prompt, scorer, **kwargs)
+                results.append(result)
         
         # Determine best technique (if scorer provided)
         best_technique = None
