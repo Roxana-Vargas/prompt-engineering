@@ -2,6 +2,14 @@
 
 Un conjunto de herramientas para diseñar, probar y optimizar prompts usando diferentes técnicas de prompt engineering.
 
+## 🎥 Demo del proyecto
+
+<a href="https://youtu.be/sOLWpS_XFWA" target="_blank">
+  <img src="https://raw.githubusercontent.com/Roxana-Vargas/prompt-engineering/refs/heads/main/Captura%20de%20pantalla%202025-12-01%20212744.png" 
+       alt="Demo" 
+       style="width:100%; max-width:800px; border-radius:12px;">
+</a>
+
 ## 🎯 Características
 
 - **Múltiples Técnicas de Prompting**: Implementación de técnicas avanzadas como:
